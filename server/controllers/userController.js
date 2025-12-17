@@ -198,12 +198,36 @@ export const getUserConnections = async (req, res) => {
 // Get user profiles
 export const getUserProfiles = async (req, res) => {
   try {
-    const { userIds } = req.body;
-    // TODO: Implement get profiles logic
-    const users = await User.find({ _id: { $in: userIds } }).select(
-      "name username profile_img"
-    );
-    res.json({ success: true, users });
+    const { profileId, userIds } = req.body;
+
+    // Handle single profile request
+    if (profileId) {
+      const profile = await User.findById(profileId);
+      if (!profile) {
+        return res.json({ success: false, message: "User not found" });
+      }
+
+      // Get posts by this user
+      const Post = (await import("../modals/Post.js")).default;
+      const posts = await Post.find({ user: profileId })
+        .populate("user", "full_name username profile_picture is_verified")
+        .sort({ createdAt: -1 });
+
+      return res.json({ success: true, profile, posts });
+    }
+
+    // Handle multiple profiles request
+    if (userIds) {
+      const users = await User.find({ _id: { $in: userIds } }).select(
+        "full_name username profile_picture"
+      );
+      return res.json({ success: true, users });
+    }
+
+    return res.json({
+      success: false,
+      message: "No profileId or userIds provided",
+    });
   } catch (error) {
     console.log(error);
     return res.json({ success: false, message: error.message });

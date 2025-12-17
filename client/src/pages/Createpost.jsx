@@ -1,14 +1,61 @@
 import React, { useState } from "react";
 import { dummyUserData } from "../assets/assets";
 import { Image, X } from "lucide-react";
-import toast from 'react-hot-toast'
+import toast from "react-hot-toast";
+import { useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
 
 const Createpost = () => {
+  const navigate = useNavigate();
   const [content, setContent] = useState("");
   const [images, setImages] = useState([]);
   const [loading, setloading] = useState(false);
-  const user = dummyUserData;
-  const handleSubmit = async () => {};
+  const user = useSelector((state) => state.user.value); //dummyUserData;
+  const { getToken } = useAuth();
+  const handleSubmit = async () => {
+    if (!images.length && !content) {
+      return toast.error("Please add atleast one image or text");
+    }
+    setloading(true);
+    const postType =
+      images.length && content
+        ? "text_with_image"
+        : images.length
+        ? "image"
+        : "text";
+    try {
+      const formData = new FormData();
+      formData.append("content", content);
+      formData.append("post_type", postType);
+      images.map((image) => {
+        formData.append("images", image);
+      });
+
+      const { data } = await api.post("/api/post/add", formData, {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (data.success) {
+        toast.success("Post created successfully!");
+        navigate("/");
+      } else {
+        console.log(data.message);
+        toast.error(data.message || "Failed to create post");
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.log(error.message);
+      toast.error(error.message || "Failed to create post");
+      throw error;
+    }
+    setloading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="max-w-6xl mx-auto p-6">
@@ -78,11 +125,11 @@ const Createpost = () => {
               multiple
               onChange={(e) => setImages([...images, ...e.target.files])}
             />
-            <button disabled={loading} onClick={()=>toast.promise(handleSubmit(),{
-              loading:'Uploading...',
-              success:<p>Post Added</p>,
-              error:<p>Post Not Added</p>,
-            })} className="text-sm bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 transition text-white font-medium px-8 py-2 rounded-md cursor-pointer">
+            <button
+              disabled={loading}
+              onClick={handleSubmit}
+              className="text-sm bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 transition text-white font-medium px-8 py-2 rounded-md cursor-pointer"
+            >
               Publish Post
             </button>
           </div>
