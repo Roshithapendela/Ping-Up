@@ -38,8 +38,18 @@ export const getStories = async (req, res) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
+    
+    if (!user) {
+      // Return empty stories if user not yet created in DB
+      return res.json({ success: true, stories: [] });
+    }
+    
     //user connections and following
-    const userIds = [userId, ...user.connections, ...user.following];
+    const userIds = [
+      userId, 
+      ...(user.connections || []), 
+      ...(user.following || [])
+    ];
     const stories = await Story.find({
       user: { $in: userIds },
     })

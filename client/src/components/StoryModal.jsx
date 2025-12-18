@@ -81,15 +81,13 @@ const StoryModal = ({ setShowModal, fetchStories }) => {
         },
       });
       if (data.success) {
-        toast.success("Story created successfully");
+        await fetchStories();
         setShowModal(false);
-        fetchStories();
+        return "Story created successfully!";
       } else {
-        toast.error(data.message);
         throw new Error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
       throw error;
     }
   };
@@ -178,6 +176,8 @@ const StoryModal = ({ setShowModal, fetchStories }) => {
           onClick={() =>
             toast.promise(handleCreateStory(), {
               loading: "Creating story...",
+              success: (msg) => msg || "Story created successfully!",
+              error: (err) => err.message || "Failed to create story",
             })
           }
           disabled={!(text || media)}

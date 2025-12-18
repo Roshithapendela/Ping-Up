@@ -1,12 +1,15 @@
 import imagekit from "../configs/imageKit.js";
 import User from "../modals/User.js";
+import Connection from "../modals/Connection.js";
 import fs from "fs";
 
 // Get user data using userId
 export const getUserData = async (req, res) => {
   try {
     const userId = req.userId;
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+
+    // If user doesn't exist, create a basic user profile
     if (!user) {
       return res.json({ success: false, message: "User Not Found" });
     }
@@ -118,7 +121,7 @@ export const followUser = async (req, res) => {
     const { id } = req.body;
     const user = await User.findById(userId);
     if (user.following.includes(id)) {
-      res.json({
+      return res.json({
         success: false,
         message: "You are already following this user",
       });
@@ -162,7 +165,29 @@ export const sendConnectionRequest = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.body;
-    // TODO: Implement connection request logic
+
+    // Check if connection already exists
+    const existingConnection = await Connection.findOne({
+      $or: [
+        { from_user_id: userId, to_user_id: id },
+        { from_user_id: id, to_user_id: userId },
+      ],
+    });
+
+    if (existingConnection) {
+      return res.json({
+        success: false,
+        message: "Connection request already exists",
+      });
+    }
+
+    // Create connection request
+    const connection = await Connection.create({
+      from_user_id: userId,
+      to_user_id: id,
+      status: "pending",
+    });
+
     res.json({ success: true, message: "Connection request sent" });
   } catch (error) {
     console.log(error);
@@ -175,7 +200,29 @@ export const acceptConnectionRequest = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.body;
-    // TODO: Implement accept connection logic
+
+    // Find the connection request
+    const connection = await Connection.findOne({
+      from_user_id: id,
+      to_user_id: userId,
+      status: "pending",
+    });
+
+    if (!connection) {
+      return res.json({
+        success: false,
+        message: "Connection request not found",
+      });
+    }
+
+    // Update connection status to accepted
+    connection.status = "accepted";
+    await connection.save();
+
+    // Add to both users' connections array
+    await User.findByIdAndUpdate(userId, { $addToSet: { connections: id } });
+    await User.findByIdAndUpdate(id, { $addToSet: { connections: userId } });
+
     res.json({ success: true, message: "Connection request accepted" });
   } catch (error) {
     console.log(error);
@@ -187,8 +234,28 @@ export const acceptConnectionRequest = async (req, res) => {
 export const getUserConnections = async (req, res) => {
   try {
     const userId = req.userId;
-    // TODO: Implement get connections logic
-    res.json({ success: true, connections: [] });
+    const user = await User.findById(userId)
+      .populate("connections", "full_name username profile_picture bio")
+      .populate("followers", "full_name username profile_picture bio")
+      .populate("following", "full_name username profile_picture bio");
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    // Get pending connection requests
+    const pendingConnections = await Connection.find({
+      to_user_id: userId,
+      status: "pending",
+    }).populate("from_user_id", "full_name username profile_picture bio");
+
+    res.json({
+      success: true,
+      connections: user.connections || [],
+      followers: user.followers || [],
+      following: user.following || [],
+      pendingConnections: pendingConnections.map((conn) => conn.from_user_id),
+    });
   } catch (error) {
     console.log(error);
     return res.json({ success: false, message: error.message });
