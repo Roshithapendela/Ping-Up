@@ -9,9 +9,36 @@ export const getUserData = async (req, res) => {
     const userId = req.userId;
     let user = await User.findById(userId);
 
-    // If user doesn't exist, create a basic user profile
+    // If user doesn't exist, create a basic user profile from Clerk
     if (!user) {
-      return res.json({ success: false, message: "User Not Found" });
+      try {
+        const { clerkClient } = await import("@clerk/express");
+        const clerkUser = await clerkClient.users.getUser(userId);
+        
+        // Generate username from email
+        let username = clerkUser.emailAddresses[0]?.emailAddress.split('@')[0] || 'user';
+        
+        // Check if username exists and make it unique
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+          username = username + Math.floor(Math.random() * 10000);
+        }
+        
+        // Create user in database
+        user = await User.create({
+          _id: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress,
+          full_name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User',
+          profile_picture: clerkUser.imageUrl,
+          username,
+          connections: [],
+          followers: [],
+          following: []
+        });
+      } catch (clerkError) {
+        console.log("Clerk fetch error:", clerkError);
+        return res.json({ success: false, message: "User Not Found" });
+      }
     }
     return res.json({ success: true, user });
   } catch (error) {
