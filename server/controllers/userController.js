@@ -14,26 +14,29 @@ export const getUserData = async (req, res) => {
       try {
         const { clerkClient } = await import("@clerk/express");
         const clerkUser = await clerkClient.users.getUser(userId);
-        
+
         // Generate username from email
-        let username = clerkUser.emailAddresses[0]?.emailAddress.split('@')[0] || 'user';
-        
+        let username =
+          clerkUser.emailAddresses[0]?.emailAddress.split("@")[0] || "user";
+
         // Check if username exists and make it unique
         const existingUser = await User.findOne({ username });
         if (existingUser) {
           username = username + Math.floor(Math.random() * 10000);
         }
-        
+
         // Create user in database
         user = await User.create({
           _id: userId,
           email: clerkUser.emailAddresses[0]?.emailAddress,
-          full_name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User',
+          full_name:
+            `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
+            "User",
           profile_picture: clerkUser.imageUrl,
           username,
           connections: [],
           followers: [],
-          following: []
+          following: [],
         });
       } catch (clerkError) {
         console.log("Clerk fetch error:", clerkError);

@@ -19,7 +19,18 @@ try {
 }
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://ping-up-84s8.vercel.app",
+      "https://ping-up-84s8.vercel.app/",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(clerkMiddleware());
 
 app.get("/", (req, res) => {
