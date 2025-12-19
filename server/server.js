@@ -25,6 +25,7 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     "http://localhost:5173",
     "https://ping-up-84s8.vercel.app",
+    "https://ping-up-updated.vercel.app",
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
