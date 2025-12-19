@@ -12,23 +12,21 @@ import toast from "react-hot-toast";
 const Feed = () => {
   const [feeds, Setfeeds] = useState([]);
   const [loading, Setloading] = useState(true);
-  const {getToken} = useAuth();
+  const { getToken } = useAuth();
 
   const fetchFeeds = async () => {
-    try{
+    try {
       Setloading(true);
-      const {data} = await api.get('/api/post/feed',{
-        headers:{Authorization:`Bearer ${await getToken()}`}
-      })
-      if(data.success){
+      const { data } = await api.get("/api/post/feed", {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      if (data.success) {
         Setfeeds(data.posts);
-
-      }else{
+      } else {
         toast.error(data.message);
       }
-
-    }catch(error){
-      toast.error(error.message)
+    } catch (error) {
+      toast.error(error.message);
     }
     Setloading(false);
   };
@@ -38,29 +36,35 @@ const Feed = () => {
   }, []);
 
   return !loading ? (
-    <div className="h-full overflow-y-auto no-scrollbar flex items-start gap-6 pl-30 pr-6 py-6">
+    <div className="h-full overflow-y-auto no-scrollbar flex items-start gap-6 px-4 sm:px-6 lg:pl-8 py-6">
       {/* Stories and Posts Column */}
       <div className="max-w-2xl w-full space-y-6">
         <StoriesBar />
         <div className="p-4 space-y-6">
-          {feeds.map((post)=>(
-            <PostCard key={post._id} post={post}/>
+          {feeds.map((post) => (
+            <PostCard key={post._id} post={post} />
           ))}
         </div>
       </div>
 
       {/* { Rightside Advertisement} */}
-      <div className='max-xl:hidden top-0 sticky'>
+      <div className="max-xl:hidden top-0 sticky">
         <div className="max-w-xs bg-white text-xs p-4 roundedd-md inline-flex flex-col gap-2 shadow">
           <h3 className="text-slate-800 font-semibold">Sponsored</h3>
-          <img src={assets.sponsored_img} alt="" className="w-75 h-50 rounded-md" />
+          <img
+            src={assets.sponsored_img}
+            alt=""
+            className="w-75 h-50 rounded-md"
+          />
           <p className="text-slate-600">Email Marketing</p>
-          <p className="text-slate-400">Supercharge your marketing with a powerful, easy-to-use platform for results.</p>
+          <p className="text-slate-400">
+            Supercharge your marketing with a powerful, easy-to-use platform for
+            results.
+          </p>
         </div>
-          <RecentMessages/>
-        </div>
+        <RecentMessages />
       </div>
-    
+    </div>
   ) : (
     <Loading />
   );
