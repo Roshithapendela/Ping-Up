@@ -19,18 +19,31 @@ try {
 }
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://ping-up-84s8.vercel.app",
-      "https://ping-up-84s8.vercel.app/",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
+// CORS configuration for Vercel
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://ping-up-84s8.vercel.app",
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(clerkMiddleware());
 
 app.get("/", (req, res) => {
