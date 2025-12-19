@@ -8,40 +8,10 @@ export const getUserData = async (req, res) => {
   try {
     const userId = req.userId;
     let user = await User.findById(userId);
-
-    // If user doesn't exist, create a basic user profile from Clerk
+    
+    // If user doesn't exist, create a basic user profile
     if (!user) {
-      try {
-        const { clerkClient } = await import("@clerk/express");
-        const clerkUser = await clerkClient.users.getUser(userId);
-
-        // Generate username from email
-        let username =
-          clerkUser.emailAddresses[0]?.emailAddress.split("@")[0] || "user";
-
-        // Check if username exists and make it unique
-        const existingUser = await User.findOne({ username });
-        if (existingUser) {
-          username = username + Math.floor(Math.random() * 10000);
-        }
-
-        // Create user in database
-        user = await User.create({
-          _id: userId,
-          email: clerkUser.emailAddresses[0]?.emailAddress,
-          full_name:
-            `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
-            "User",
-          profile_picture: clerkUser.imageUrl,
-          username,
-          connections: [],
-          followers: [],
-          following: [],
-        });
-      } catch (clerkError) {
-        console.log("Clerk fetch error:", clerkError);
-        return res.json({ success: false, message: "User Not Found" });
-      }
+      return res.json({ success: false, message: "User Not Found" });
     }
     return res.json({ success: true, user });
   } catch (error) {
@@ -195,29 +165,26 @@ export const sendConnectionRequest = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.body;
-
+    
     // Check if connection already exists
     const existingConnection = await Connection.findOne({
       $or: [
         { from_user_id: userId, to_user_id: id },
-        { from_user_id: id, to_user_id: userId },
-      ],
+        { from_user_id: id, to_user_id: userId }
+      ]
     });
-
+    
     if (existingConnection) {
-      return res.json({
-        success: false,
-        message: "Connection request already exists",
-      });
+      return res.json({ success: false, message: "Connection request already exists" });
     }
-
+    
     // Create connection request
     const connection = await Connection.create({
       from_user_id: userId,
       to_user_id: id,
-      status: "pending",
+      status: 'pending'
     });
-
+    
     res.json({ success: true, message: "Connection request sent" });
   } catch (error) {
     console.log(error);
@@ -230,29 +197,26 @@ export const acceptConnectionRequest = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.body;
-
+    
     // Find the connection request
     const connection = await Connection.findOne({
       from_user_id: id,
       to_user_id: userId,
-      status: "pending",
+      status: 'pending'
     });
-
+    
     if (!connection) {
-      return res.json({
-        success: false,
-        message: "Connection request not found",
-      });
+      return res.json({ success: false, message: "Connection request not found" });
     }
-
+    
     // Update connection status to accepted
-    connection.status = "accepted";
+    connection.status = 'accepted';
     await connection.save();
-
+    
     // Add to both users' connections array
     await User.findByIdAndUpdate(userId, { $addToSet: { connections: id } });
     await User.findByIdAndUpdate(id, { $addToSet: { connections: userId } });
-
+    
     res.json({ success: true, message: "Connection request accepted" });
   } catch (error) {
     console.log(error);
