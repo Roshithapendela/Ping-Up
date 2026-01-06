@@ -2,6 +2,7 @@ import fs from "fs";
 import imagekit from "../configs/imageKit.js";
 import Story from "../modals/Story.js";
 import User from "../modals/User.js";
+import { inngest } from "../inngest/index.js";
 //add user story
 export const addUserStory = async (req, res) => {
   try {
@@ -26,6 +27,15 @@ export const addUserStory = async (req, res) => {
       media_type,
       background_color,
     });
+
+    // Trigger Inngest event to delete story after 24 hours
+    await inngest.send({
+      name: "app/story.delete",
+      data: {
+        storyId: story._id.toString(),
+      },
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.log(error);
@@ -38,17 +48,17 @@ export const getStories = async (req, res) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
-    
+
     if (!user) {
       // Return empty stories if user not yet created in DB
       return res.json({ success: true, stories: [] });
     }
-    
+
     //user connections and following
     const userIds = [
-      userId, 
-      ...(user.connections || []), 
-      ...(user.following || [])
+      userId,
+      ...(user.connections || []),
+      ...(user.following || []),
     ];
     const stories = await Story.find({
       user: { $in: userIds },
